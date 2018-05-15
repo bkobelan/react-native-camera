@@ -545,7 +545,7 @@ RCT_EXPORT_METHOD(setZoom:(CGFloat)zoomFactor) {
     [self.session beginConfiguration];
 
     NSError *error = nil;
-      
+
     AVCaptureDevice *currentCaptureDevice = [self.videoCaptureDeviceInput device];
     AVCaptureDevice *captureDevice;
 
@@ -580,7 +580,7 @@ RCT_EXPORT_METHOD(setZoom:(CGFloat)zoomFactor) {
       else if (type == AVMediaTypeVideo) {
         [NSNotificationCenter.defaultCenter removeObserver:self name:AVCaptureDeviceSubjectAreaDidChangeNotification object:currentCaptureDevice];
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(subjectAreaDidChange:) name:AVCaptureDeviceSubjectAreaDidChangeNotification object:captureDevice];
-          
+
         self.videoCaptureDeviceInput = captureDeviceInput;
         [self setFlashMode];
       }
@@ -654,6 +654,21 @@ RCT_EXPORT_METHOD(setZoom:(CGFloat)zoomFactor) {
           // setup viewport size before using
           CGSize viewportSize;
 
+          // Crop it
+          if (self.cropToPreview) {
+
+              if (UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation]))
+              {
+                  viewportSize = CGSizeMake(self.previewLayer.frame.size.height, self.previewLayer.frame.size.width);
+              } else {
+                  viewportSize = CGSizeMake(self.previewLayer.frame.size.width, self.previewLayer.frame.size.height);
+              }
+
+              CGRect captureRect = CGRectMake(0, 0, CGImageGetWidth(rotatedCGImage), CGImageGetHeight(rotatedCGImage));
+              CGRect croppedSize = AVMakeRectWithAspectRatioInsideRect(viewportSize, captureRect);
+              rotatedCGImage = CGImageCreateWithImageInRect(rotatedCGImage, croppedSize);
+          }
+
           // Rotate it
           CGImageRef rotatedCGImage;
           if ([options objectForKey:@"rotation"]) {
@@ -681,21 +696,6 @@ RCT_EXPORT_METHOD(setZoom:(CGFloat)zoomFactor) {
             }
           } else {
             rotatedCGImage = cgImage;
-          }
-
-          // Crop it
-          if (self.cropToPreview) {
-
-              if (UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation]))
-              {
-                  viewportSize = CGSizeMake(self.previewLayer.frame.size.height, self.previewLayer.frame.size.width);
-              } else {
-                  viewportSize = CGSizeMake(self.previewLayer.frame.size.width, self.previewLayer.frame.size.height);
-              }
-
-              CGRect captureRect = CGRectMake(0, 0, CGImageGetWidth(rotatedCGImage), CGImageGetHeight(rotatedCGImage));
-              CGRect croppedSize = AVMakeRectWithAspectRatioInsideRect(viewportSize, captureRect);
-              rotatedCGImage = CGImageCreateWithImageInRect(rotatedCGImage, croppedSize);
           }
 
           // Erase stupid TIFF stuff
@@ -1018,7 +1018,7 @@ didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL
 {
   CGPoint devicePoint = CGPointMake(.5, .5);
   [self focusWithMode:AVCaptureFocusModeContinuousAutoFocus exposeWithMode:AVCaptureExposureModeContinuousAutoExposure atDevicePoint:devicePoint monitorSubjectAreaChange:NO];
-    
+
   if (self.camera.camFocus)
   {
     [self.camera.camFocus removeFromSuperview];
